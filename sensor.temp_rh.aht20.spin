@@ -26,10 +26,6 @@ OBJ
     u64 : "math.unsigned64"                     ' unsigned 64-bit math
     crc : "math.crc"
 
-VAR
-
-    long _last_rh, _last_temp
-
 PUB Start{}: status
 ' Start using "standard" Propeller I2C pins and 100kHz
     return startx(DEF_SCL, DEF_SDA, DEF_HZ)
