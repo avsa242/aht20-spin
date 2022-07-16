@@ -26,7 +26,12 @@ CON
 
 OBJ
 
+{ decide: Bytecode I2C engine, or PASM? Default is PASM if BC isn't specified }
+#ifdef AHT20_I2C_BC
+    i2c : "com.i2c.nocog"                       ' SPIN I2C engine (~25kHz)
+#else
     i2c : "com.i2c"                             ' PASM I2C engine (up to ~800kHz)
+#endif
     core: "core.con.aht20"                      ' AHT20-specific constants
     time: "time"                                ' basic timing functions
     u64 : "math.unsigned64"                     ' unsigned 64-bit math
