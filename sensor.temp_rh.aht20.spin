@@ -5,7 +5,7 @@
     Description: Driver for AHT20 temperature/RH sensors
     Copyright (c) 2022
     Started Mar 26, 2022
-    Updated Jul 16, 2022
+    Updated Sep 24, 2022
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -37,7 +37,7 @@ OBJ
     u64 : "math.unsigned64"                     ' unsigned 64-bit math
     crc : "math.crc"
 
-PUB Start{}: status
+PUB start{}: status
 ' Start using "standard" Propeller I2C pins and 100kHz
     return startx(DEF_SCL, DEF_SDA, DEF_HZ)
 
@@ -47,7 +47,7 @@ PUB startx(SCL_PIN, SDA_PIN, I2C_HZ): status
 }   I2C_HZ =< core#I2C_MAX_FREQ                 ' validate pins and bus freq
         if (status := i2c.init(SCL_PIN, SDA_PIN, I2C_HZ))
             time.usleep(core#T_POR)             ' wait for device startup
-            if (deviceid{} == core#DEVID_RESP)
+            if (dev_id{} == core#DEVID_RESP)
                 return
     ' if this point is reached, something above failed
     ' Re-check I/O pin assignments, bus speed, connections, power
@@ -67,7 +67,7 @@ PUB calibrate{}
 '   NOTE: This only needs to be performed once at power-on
     cmd(core#CMD_CAL)
 
-PUB deviceid{}: id
+PUB dev_id{}: id
 ' Read device identification
 '   NOTE: This device has no known device ID register, so the I2C address
 '       is returned instead, if it responds.
@@ -85,43 +85,43 @@ PUB reset{}
     time.usleep(core#T_RES)
     calibrate{}
 
-PUB rhdata{}: rhword
+PUB rh_data{}: rhword
 ' Relative humidity ADC word
 '   Returns: u20
     measure{}
     readreg(core#GET_MEAS, 0, 0)
     return _last_rh
 
-PUB rhdataready{}: flag
+PUB rh_data_rdy{}: flag
 ' Flag indicating relative humidity measurement data ready
 '   Returns: TRUE (-1) or FALSE (0)
-    return temprhdataready{}
+    return temp_rh_data_rdy{}
 
-PUB rhword2pct(rhword): pct
+PUB rh_word2pct(rhword): pct
 ' Convert RH ADC word to hundredths of a percent
 '   Returns: 0..100_00
     return u64.multdiv(rhword, FP_SCALE, TWO20)
 
-PUB tempdataready{}: flag
+PUB temp_data_rdy{}: flag
 ' Flag indicating temperature measurement data ready
 '   Returns: TRUE (-1) or FALSE (0)
-    return temprhdataready{}
+    return temp_rh_data_rdy{}
 
-PUB temprhdataready{}: flag
+PUB temp_rh_data_rdy{}: flag
 ' Flag indicating temperature and RH measurements data ready
 '   Returns: TRUE (-1) or FALSE (0)
     flag := 0
     readreg(core#STATUS, 1, @flag)
     return ((flag & core#ST_BUSY) == 0)
 
-PUB tempdata{}: tword
+PUB temp_data{}: tword
 ' Temperature ADC word
 '   Returns: s20
     measure{}
     readreg(core#GET_MEAS, 0, 0)
     return _last_temp
 
-PUB tempword2deg(tword): deg | sign
+PUB temp_word2deg(tword): deg | sign
 ' Convert temperature ADC word to degrees
 '   Returns: hundredths of a degree, in chosen scale
     if (tword & $8000_0000)                     ' negative temp?
