@@ -22,7 +22,7 @@ CON
 
 OBJ
 
-    sensor: "sensor.temp_rh.aht20" | SCL=26, SDA=27, I2C_FREQ=400_000
+    sensor: "sensor.temp_rh.aht20" | SCL=28, SDA=29, I2C_FREQ=400_000
     ser:    "com.serial.terminal.ansi" | SER_BAUD=115_200
     time:   "time"
 
