@@ -50,7 +50,7 @@ PUB start(): status
     return startx(SCL, SDA, I2C_FREQ, I2C_ADDR)
 
 
-PUB startx(SCL_PIN, SDA_PIN, I2C_HZ, I2C_ADDR=0): status
+PUB startx(SCL_PIN, SDA_PIN, I2C_HZ, ADDR_BITS=0): status
 ' Start the driver with custom I/O settings
 '   SCL_PIN:    I2C clock, 0..31
 '   SDA_PIN:    I2C data, 0..31
@@ -82,7 +82,12 @@ PUB defaults()
 PUB calibrate()
 ' Perform device calibration
 '   NOTE: This only needs to be performed once at power-on
-    cmd(core.CMD_CAL)
+    i2c.start()
+    i2c.write(SLAVE_WR)
+    i2c.write(core.CMD_CAL)
+    i2c.write(core.CAL_PARMSB)
+    i2c.write(core.CAL_PARLSB)
+    i2c.stop()
 
 
 PUB dev_id(): id
@@ -98,9 +103,20 @@ PUB measure(): flag | rd_data_tmp[2], crc_rd, crc_calc
 '   Returns:
 '       0: CRC ok
 '       -1: CRC bad (RH/temperature data shouldn't be trusted)
-    cmd(core.CMD_MEAS)
+    i2c.start()
+    i2c.write(SLAVE_WR)
+    i2c.write(core.CMD_MEAS)                    ' perform measurement
+    i2c.write(core.MEAS_PARMSB)
+    i2c.write(core.MEAS_PARLSB)
+    i2c.stop()
+
     bytefill(@rd_data_tmp, 0, 7)
-    readreg(core.GET_MEAS, 7, @rd_data_tmp)
+
+    i2c.start()
+    i2c.write(SLAVE_RD)
+    i2c.rdblock_lsbf(@rd_data_tmp, 7, i2c.NAK)  ' read measurement (temp + RH + CRC)
+    i2c.stop()
+
     _last_rh := rd_data_tmp.byte[1] << 12
     _last_rh |= (rd_data_tmp.byte[2] << 4)
     _last_rh |= ((rd_data_tmp.byte[3] >> 4) & $0f)
@@ -120,7 +136,11 @@ PUB measure(): flag | rd_data_tmp[2], crc_rd, crc_calc
 
 PUB reset()
 ' Reset the device
-    cmd(core.CMD_SOFT_RST)
+    i2c.start()
+    i2c.write(SLAVE_WR)
+    i2c.write(core.CMD_SOFT_RST)
+    i2c.stop()
+
     time.usleep(core.T_RES)
     calibrate()
 
@@ -154,7 +174,14 @@ PUB temp_rh_data_rdy(): flag
 ' Flag indicating temperature and RH measurements data ready
 '   Returns: TRUE (-1) or FALSE (0)
     flag := 0
-    readreg(core.STATUS, 1, @flag)
+    i2c.start()
+    i2c.write(SLAVE_WR)
+    i2c.write(core.STATUS)
+    i2c.start()
+    i2c.wr_byte(SLAVE_RD)
+    flag := i2c.read(i2c.NAK)
+    i2c.stop()
+
     return ((flag & core.ST_BUSY) == 0)
 
 
@@ -182,52 +209,6 @@ PUB temp_word2deg(tword): deg | sign
             return ((deg * 9) / 5) + 32_00
         K:                                      ' Kelvin
             return (deg + 273_15)
-
-
-PRI cmd(cmd_nr)
-' Issue command 'cmd_nr' to device
-    case cmd_nr
-        core.CMD_MEAS:                          ' perform measurement
-            i2c.start()
-            i2c.write(SLAVE_WR)
-            i2c.write(core.CMD_MEAS)
-            i2c.write(core.MEAS_PARMSB)
-            i2c.write(core.MEAS_PARLSB)
-            i2c.stop()
-        core.CMD_CAL:                           ' perform calibration
-            i2c.start()
-            i2c.write(SLAVE_WR)
-            i2c.write(core.CMD_CAL)
-            i2c.write(core.CAL_PARMSB)
-            i2c.write(core.CAL_PARLSB)
-            i2c.stop()
-        core.CMD_SOFT_RST:                      ' soft-reset or calibrate
-            i2c.start()
-            i2c.write(SLAVE_WR)
-            i2c.write(cmd_nr)
-            i2c.stop()
-        other:
-            return
-
-
-PRI readreg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt
-' Read nr_bytes from the device into ptr_buff
-    case reg_nr                                 ' validate register num
-        core.STATUS:
-            i2c.start()
-            i2c.write(SLAVE_WR)
-            i2c.write(core.STATUS)
-            i2c.start()
-            i2c.wr_byte(SLAVE_RD)
-            byte[ptr_buff] := i2c.read(i2c.NAK)
-            i2c.stop()
-        core.GET_MEAS:
-            i2c.start()
-            i2c.write(SLAVE_RD)
-            i2c.rdblock_lsbf(ptr_buff, nr_bytes, i2c.NAK)
-            i2c.stop()
-        other:                                  ' invalid reg_nr
-            return
 
 
 DAT
