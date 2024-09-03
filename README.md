@@ -29,10 +29,10 @@ P2/SPIN2:
 
 | Processor | Language | Compiler               | Backend     | Status                |
 |-----------|----------|------------------------|-------------|-----------------------|
-| P1        | SPIN1    | FlexSpin (6.5.0-beta)  | Bytecode    | OK                    |
-| P1        | SPIN1    | FlexSpin (6.5.0-beta)  | Native code | OK                    |
-| P2        | SPIN2    | FlexSpin (6.5.0-beta)  | NuCode      | OK                    |
-| P2        | SPIN2    | FlexSpin (6.5.0-beta)  | Native code | OK                    |
+| P1        | SPIN1    | FlexSpin (6.9.4)       | Bytecode    | OK                    |
+| P1        | SPIN1    | FlexSpin (6.9.4)       | Native code | OK                    |
+| P2        | SPIN2    | FlexSpin (6.9.4)       | NuCode      | OK                    |
+| P2        | SPIN2    | FlexSpin (6.9.4)       | Native code | OK                    |
 
 (other versions or toolchains not listed are __not supported__, and _may or may not_ work)
 

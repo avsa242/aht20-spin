@@ -1,50 +1,59 @@
 {
-    --------------------------------------------
-    Filename: sensor.temp_rh.aht20.spin2
-    Author: Jesse Burt
-    Description: Driver for AHT20 temperature/RH sensors (P2 version)
-    Copyright (c) 2023
-    Started Mar 27, 2022
-    Updated Nov 18, 2023
-    See end of file for terms of use.
-    --------------------------------------------
+----------------------------------------------------------------------------------------------------
+    Filename:       sensor.temp_rh.aht20.spin
+    Description:    Driver for AHT20 temperature/RH sensors
+    Author:         Jesse Burt
+    Started:        Mar 26, 2022
+    Updated:        Sep 3, 2024
+    Copyright (c) 2024 - See end of file for terms of use.
+----------------------------------------------------------------------------------------------------
 }
-{ pull in methods common to all Temp/RH drivers }
-#include "sensor.temp_rh.common.spin2h"
+
+#include "sensor.temp_rh.common.spin2h"         ' use code common to all Temp/RH drivers
 
 CON
 
-    { I2C }
+    { default I/O settings; these can be overridden in the parent object }
+    SCL         = 0
+    SDA         = 1
+    I2C_FREQ    = 100_000
+    I2C_ADDR    = %0
+'   --
+
     SLAVE_WR    = core.SLAVE_ADDR
     SLAVE_RD    = core.SLAVE_ADDR | 1
-    DEF_HZ      = 100_000
-    DEF_ADDR    = 0
 
     FP_SCALE    = 10_000
     TWO20       = (1 << 20)                     ' 2^20
 
 
-    { default I/O settings; these can be overridden in the parent object }
-    SCL         = 0
-    SDA         = 1
-    I2C_FREQ    = DEF_HZ
-    I2C_ADDR    = DEF_ADDR
-
 OBJ
 
-    i2c : "com.i2c"                             ' I2C engine
-    core: "core.con.aht20"                      ' AHT20-specific constants
-    crc : "math.crc"
+    i2c:    "com.i2c"                           ' I2C engine
+    core:   "core.con.aht20"                    ' AHT20-specific constants
+    crc:    "math.crc"
+
+
+PUB null()
+' This is not a top-level object
+
 
 PUB start(): status
-' Start using "standard" Propeller I2C pins and 100kHz
+' Start the driver using default I/O settings
     return startx(SCL, SDA, I2C_FREQ, I2C_ADDR)
 
+
 PUB startx(SCL_PIN, SDA_PIN, I2C_HZ, I2C_ADDR=0): status
-' Start using custom IO pins and I2C bus frequency
-    if (lookdown(SCL_PIN: 0..63) and lookdown(SDA_PIN: 0..63) and {
-}       I2C_HZ <= core.I2C_MAX_FREQ)            ' validate pins and bus freq
-        if (status := i2c.init(SCL_PIN, SDA_PIN, I2C_HZ))
+' Start the driver with custom I/O settings
+'   SCL_PIN:    I2C clock, 0..31
+'   SDA_PIN:    I2C data, 0..31
+'   I2C_HZ:     I2C clock speed
+'   ADDR_BITS:  I2C alternate address bit (unused)
+'   Returns:
+'       cog ID+1 of I2C engine on success
+'       0 on failure
+    if ( lookdown(SCL_PIN: 0..63) and lookdown(SDA_PIN: 0..63) )
+        if ( status := i2c.init(SCL_PIN, SDA_PIN, I2C_HZ) )
             waitus(core.T_POR)                  ' wait for device startup
             return
     ' if this point is reached, something above failed
@@ -52,25 +61,30 @@ PUB startx(SCL_PIN, SDA_PIN, I2C_HZ, I2C_ADDR=0): status
     ' Lastly - make sure you have at least one free core/cog 
     return FALSE
 
+
 PUB stop()
 ' Stop driver
     i2c.deinit()
 
+
 PUB defaults()
 ' Set factory defaults
     reset()
+
 
 PUB calibrate()
 ' Perform device calibration
 '   NOTE: This only needs to be performed once at power-on
     cmd(core.CMD_CAL)
 
+
 PUB dev_id(): id
 ' Read device identification
 '   NOTE: This device has no known device ID register, so the I2C address
 '       is returned instead, if it responds.
-    if (i2c.present(core.SLAVE_ADDR))
+    if ( i2c.present(core.SLAVE_ADDR) )
         return core.DEVID_RESP
+
 
 PUB measure(): flag | rd_data_tmp[2], crc_rd, crc_calc
 ' Perform temperature/RH measurement
@@ -96,11 +110,13 @@ PUB measure(): flag | rd_data_tmp[2], crc_rd, crc_calc
 
     return (crc_rd <> crc_calc)                 ' return -1 if the CRCs don't match
 
+
 PUB reset()
 ' Reset the device
     cmd(core.CMD_SOFT_RST)
     waitus(core.T_RES)
     calibrate()
+
 
 PUB rh_data(): rhword
 ' Relative humidity ADC word
@@ -108,20 +124,24 @@ PUB rh_data(): rhword
 '   NOTE: measure() must be called at least once for this data to be valid
     return _last_rh
 
+
 PUB rh_data_rdy(): flag
 ' Flag indicating relative humidity measurement data ready
 '   Returns: TRUE (-1) or FALSE (0)
     return temp_rh_data_rdy()
+
 
 PUB rh_word2pct(rhword): pct
 ' Convert RH ADC word to hundredths of a percent
 '   Returns: 0..100_00
     return muldiv64(rhword, FP_SCALE, TWO20)
 
+
 PUB temp_data_rdy(): flag
 ' Flag indicating temperature measurement data ready
 '   Returns: TRUE (-1) or FALSE (0)
     return temp_rh_data_rdy()
+
 
 PUB temp_rh_data_rdy(): flag
 ' Flag indicating temperature and RH measurements data ready
@@ -130,16 +150,18 @@ PUB temp_rh_data_rdy(): flag
     readreg(core.STATUS, 1, @flag)
     return ((flag & core.ST_BUSY) == 0)
 
+
 PUB temp_data(): tword
 ' Temperature ADC word
 '   Returns: s20
 '   NOTE: measure() must be called at least once for this data to be valid
     return _last_temp
 
+
 PUB temp_word2deg(tword): deg | sign
 ' Convert temperature ADC word to degrees
 '   Returns: hundredths of a degree, in chosen scale
-    if (tword & $8000_0000)                     ' negative temp?
+    if ( tword & $8000_0000 )                   ' negative temp?
         sign := -1                              ' preserve sign - u64 object
     else                                        '   only handles unsigned math
         sign := 1
@@ -153,6 +175,7 @@ PUB temp_word2deg(tword): deg | sign
             return ((deg * 9) / 5) + 32_00
         K:                                      ' Kelvin
             return (deg + 273_15)
+
 
 PRI cmd(cmd_nr)
 ' Issue command 'cmd_nr' to device
@@ -179,6 +202,7 @@ PRI cmd(cmd_nr)
         other:
             return
 
+
 PRI readreg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt
 ' Read nr_bytes from the device into ptr_buff
     case reg_nr                                 ' validate register num
@@ -198,9 +222,10 @@ PRI readreg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt
         other:                                  ' invalid reg_nr
             return
 
+
 DAT
 {
-Copyright 2023 Jesse Burt
+Copyright 2024 Jesse Burt
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,

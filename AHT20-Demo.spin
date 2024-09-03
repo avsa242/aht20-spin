@@ -1,41 +1,54 @@
 {
-    --------------------------------------------
-    Filename: AHT20-Demo.spin
-    Author: Jesse Burt
-    Description: AHT20 driver demo
-        * Temp/RH data output
-    Copyright (c) 2023
-    Started Jun 16, 2021
-    Updated Nov 12, 2023
-    See end of file for terms of use.
-    --------------------------------------------
-
-    Build-time symbols supported by driver:
-        -DAHT20_I2C (default if none specified)
-        -DAHT20_I2C_BC
+----------------------------------------------------------------------------------------------------
+    Filename:       AHT20-Demo.spin
+    Description:    Driver for AHT20 temperature/RH sensors
+    Author:         Jesse Burt
+    Started:        Jun 16, 2021
+    Updated:        Sep 3, 2024
+    Copyright (c) 2024 - See end of file for terms of use.
+----------------------------------------------------------------------------------------------------
 }
+
+
 ' Uncomment to use the bytecode-based I2C engine
-#define AHT20_I2C_BC
-#pragma exportdef(AHT20_I2C_BC)
+'#define AHT20_I2C_BC
+'#pragma exportdef(AHT20_I2C_BC)
 
 CON
 
-    _clkmode    = cfg#_clkmode
-    _xinfreq    = cfg#_xinfreq
+    _clkmode    = xtal1+pll16x
+    _xinfreq    = 5_000_000
 
 
 OBJ
 
-    cfg:    "boardcfg.flip"
     sensor: "sensor.temp_rh.aht20" | SCL=28, SDA=29, I2C_FREQ=400_000
     ser:    "com.serial.terminal.ansi" | SER_BAUD=115_200
     time:   "time"
 
-PUB setup{}
+
+PUB main() | rh, temp, tscl
+
+    setup()
+    sensor.temp_scale(sensor.C)                 ' C, F
+
+    repeat
+        ser.pos_xy(0, 3)
+        sensor.measure()
+        rh := sensor.rh()
+        temp := sensor.temperature()
+        tscl := lookupz(sensor.temp_scale(-2): "C", "F", "K")
+
+        ser.printf3(@"Temp. (deg %c): %3.3d.%02.2d\n\r", tscl, (temp / 100), ||(temp // 100))
+        ser.printf2(@"Rel. humidity (%%): %3.3d.%02.2d\n\r", (rh / 100), (rh // 100))
+        time.msleep(250)
+
+
+PUB setup()
 
     ser.start()
     time.msleep(30)
-    ser.clear{}
+    ser.clear()
     ser.strln(@"Serial terminal started")
 
     if ( sensor.start() )
@@ -44,11 +57,9 @@ PUB setup{}
         ser.strln(@"AHT20 driver failed to start - halting")
         repeat
 
-    sensor.reset{}
-    sensor.temp_scale(C)
-    demo{}
+    sensor.reset()
+    sensor.calibrate()                          ' this only needs to be done once per power cycle
 
-#include "temp_rhdemo.common.spinh"             ' code common to all temp/RH demos
 
 DAT
 {

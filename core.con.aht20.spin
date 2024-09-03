@@ -1,13 +1,12 @@
 {
-    --------------------------------------------
-    Filename: core.con.aht20.spin
-    Author: Jesse Burt
-    Description: AHT20-specific constants
-    Copyright (c) 2022
-    Started Mar 26, 2022
-    Updated Mar 27, 2022
-    See end of file for terms of use.
-    --------------------------------------------
+----------------------------------------------------------------------------------------------------
+    Filename:       core.con.aht20.spin
+    Description:    AHT20-specific constants
+    Author:         Jesse Burt
+    Started:        Mar 26, 2022
+    Updated:        Sep 3, 2024
+    Copyright (c) 2024 - See end of file for terms of use.
+----------------------------------------------------------------------------------------------------
 }
 
 CON
@@ -35,12 +34,13 @@ CON
         CAL_PARLSB  = $00
     GET_MEAS        = $52_45_41_44              ' pseudo-reg 'R_E_A_D'
 
-PUB null{}
+PUB null()
 ' This is not a top-level object
+
 
 DAT
 {
-Copyright 2022 Jesse Burt
+Copyright 2024 Jesse Burt
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,
